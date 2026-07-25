@@ -61,7 +61,7 @@ func (s *service) GetPaymentURL(transaction Transaction, user user.User) (string
 			Email: user.Email,
 		},
 		Callbacks: &snap.Callbacks{
-			Finish: os.Getenv("FRONTEND_URL") + "/fund-success",
+			Finish: os.Getenv("FRONTEND_URL") + "/transaction/finish",
 		},
 	}
 

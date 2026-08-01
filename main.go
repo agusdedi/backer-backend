@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -59,8 +60,13 @@ func main() {
 	// Router
 	router := gin.Default()
 
+	allowedOrigins := []string{"http://localhost:3000"}
+	if extraOrigin := os.Getenv("EXTRA_CORS_ORIGIN"); extraOrigin != "" {
+		allowedOrigins = append(allowedOrigins, extraOrigin)
+	}
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

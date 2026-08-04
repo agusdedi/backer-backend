@@ -1,0 +1,52 @@
+{{ define "content" }}
+<h2 class="mb-4">List of Users</h2>
+<div class="card mb-4">
+    <div class="card-body">
+        <table class="table mb-0">
+            <thead class="thead-light">
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Occupation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .users }}
+                <tr>
+                    <td>
+                        <div class="rounded-circle avatar-wrapper" style="width: 40px; height: 40px; overflow: hidden;">
+                            <img
+                                class="avatar-thumb"
+                                src="{{ .AvatarFileName }}"
+                                alt="{{ .Name }}"
+                                width="40"
+                                height="40"
+                                style="object-fit: cover; display: block;"
+                            >
+                        </div>
+                    </td>
+                    <td>{{ .Name }}</td>
+                    <td>{{ .Email }}</td>
+                    <td>{{ .Occupation }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    document.querySelectorAll('.avatar-thumb').forEach(function (img) {
+        function hideImg() {
+            img.removeEventListener('error', hideImg)
+            img.style.display = 'none'
+            img.closest('.avatar-wrapper').style.backgroundColor = '#e9ecef'
+        }
+        if (img.complete) {
+            if (img.naturalWidth === 0) hideImg()
+        } else {
+            img.addEventListener('error', hideImg)
+        }
+    })
+</script>
+{{ end }}

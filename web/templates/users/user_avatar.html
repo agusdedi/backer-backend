@@ -1,0 +1,25 @@
+{{ define "content" }}
+<h2 class="mb-4">Upload Avatar</h2>
+
+{{ if .Errors }}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        {{ range .Errors }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</div>
+{{ end }}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form action="/users/avatar/{{ .ID }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="avatar">Upload Avatar</label>
+                <input type="file" class="form-control-file" id="avatar" name="avatar" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+    </div>
+</div>
+{{ end }}

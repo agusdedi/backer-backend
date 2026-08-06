@@ -124,6 +124,8 @@ func main() {
 	router.POST(usersPath, userWebHandler.Create)
 	router.GET(usersPath+"/edit/:id", userWebHandler.Edit)
 	router.POST(usersPath+"/update/:id", userWebHandler.Update)
+	router.GET(usersPath+"/avatar/:id", userWebHandler.Avatar)
+	router.POST(usersPath+"/avatar/:id", userWebHandler.UpdateAvatar)
 
 	router.Run(":8080")
 }

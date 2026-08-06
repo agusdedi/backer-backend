@@ -2,19 +2,37 @@ package handler
 
 import (
 	"backer/user"
+	"fmt"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
 
 const (
-	userIndexTemplate = "user_index.html"
-	userEditTemplate  = "user_edit.html"
-	userNewTemplate   = "user_new.html"
-	errorTemplate     = "error.html"
+	userIndexTemplate  = "user_index.html"
+	userEditTemplate   = "user_edit.html"
+	userNewTemplate    = "user_new.html"
+	errorTemplate      = "error.html"
+	userAvatarTemplate = "user_avatar.html"
+	usersRedirectPath  = "/users"
+
+	avatarUploadDir     = "images/avatars"
+	maxAvatarUploadSize = 2 << 20 // 2 MB
 )
+
+// allowedAvatarExtensions whitelists which file extensions are accepted
+// for avatar uploads.
+var allowedAvatarExtensions = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+}
 
 type userHandler struct {
 	userService user.Service
@@ -67,7 +85,7 @@ func (h *userHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/users")
+	c.Redirect(http.StatusFound, usersRedirectPath)
 }
 
 // formatUserFormErrors converts raw validator errors into friendly,
@@ -141,5 +159,106 @@ func (h *userHandler) Update(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/users")
+	c.Redirect(http.StatusFound, usersRedirectPath)
+}
+
+func (h *userHandler) Avatar(c *gin.Context) {
+	idParam := c.Param("id")
+	id, _ := strconv.Atoi(idParam)
+
+	c.HTML(http.StatusOK, userAvatarTemplate, gin.H{"ID": id})
+}
+
+func (h *userHandler) UpdateAvatar(c *gin.Context) {
+	idParam := c.Param("id")
+	id, _ := strconv.Atoi(idParam)
+
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{"Failed to upload avatar. Please try again."},
+		})
+		return
+	}
+
+	if err := validateAvatarFile(file); err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{err.Error()},
+		})
+		return
+	}
+
+	if err := os.MkdirAll(avatarUploadDir, 0755); err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{"Failed to prepare upload directory. Please try again."},
+		})
+		return
+	}
+
+	// Build a safe destination filename by prefixing the user ID and
+	// sanitizing the original filename, instead of trusting it as-is.
+	filename := fmt.Sprintf("%d-%s", id, sanitizeAvatarFilename(file.Filename))
+	path := filepath.Join(avatarUploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, path); err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{"Failed to save avatar file. Please try again."},
+		})
+		return
+	}
+
+	if _, err := h.userService.SaveAvatar(id, path); err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{"Failed to update avatar. Please try again."},
+		})
+		return
+	}
+
+	c.Redirect(http.StatusFound, usersRedirectPath)
+}
+
+// sanitizeAvatarFilename converts a user-supplied filename into a safe
+// filename that can be used on the server's filesystem.
+func sanitizeAvatarFilename(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	if !allowedAvatarExtensions[ext] {
+		ext = ""
+	}
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	base = strings.Join(strings.Fields(base), "-")
+
+	var b strings.Builder
+	for _, r := range base {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+			b.WriteRune(r)
+		}
+	}
+
+	sanitized := b.String()
+	if sanitized == "" {
+		sanitized = "avatar"
+	}
+
+	return sanitized + ext
+}
+
+// validateAvatarFile checks the uploaded file's size and extension before
+// it's written to disk or handed to the service layer.
+func validateAvatarFile(file *multipart.FileHeader) error {
+	if file.Size > maxAvatarUploadSize {
+		return fmt.Errorf("file is too large. Maximum size is %d MB", maxAvatarUploadSize/(1<<20))
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if !allowedAvatarExtensions[ext] {
+		return fmt.Errorf("unsupported file type. Allowed types: jpg, jpeg, png")
+	}
+
+	return nil
 }

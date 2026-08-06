@@ -1,0 +1,37 @@
+{{ define "content" }}
+<h2 class="mb-4">Create User</h2>
+
+{{ if .Errors }}
+<div class="alert alert-danger">
+    <ul class="mb-0 ps-3">
+        {{ range .Errors }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</div>
+{{ end }}
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="/users">
+            <div class="mb-3">
+                <label for="user-name" class="form-label">Name</label>
+                <input id="user-name" type="text" name="name" class="form-control" placeholder="e.g. John Doe" value="{{ .Input.Name }}">
+            </div>
+            <div class="mb-3">
+                <label for="user-email" class="form-label">Email</label>
+                <input id="user-email" type="email" name="email" class="form-control" placeholder="e.g. john@example.com" value="{{ .Input.Email }}">
+            </div>
+            <div class="mb-3">
+                <label for="user-occupation" class="form-label">Occupation</label>
+                <input id="user-occupation" type="text" name="occupation" class="form-control" placeholder="e.g. Software Engineer" value="{{ .Input.Occupation }}">
+            </div>
+            <div class="mb-3">
+                <label for="user-password" class="form-label">Password</label>
+                <input id="user-password" type="password" name="password" class="form-control" placeholder="Enter a secure password">
+            </div>
+            <button type="submit" class="btn btn-primary">Create User</button>
+        </form>
+    </div>
+</div>
+{{ end }}

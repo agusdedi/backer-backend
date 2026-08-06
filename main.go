@@ -9,6 +9,7 @@ import (
 	"backer/payment"
 	"backer/transaction"
 	"backer/user"
+	webHandler "backer/web/handler"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,8 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	webHandler "backer/web/handler"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/cors"
@@ -28,21 +27,31 @@ import (
 	"gorm.io/gorm"
 )
 
+const usersPath = "/users"
+
 func main() {
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Println(".env file not found, using system environment variables")
+		log.Println("Warning: failed to load .env file:", err)
 	}
 
 	// Load config from .env or environment variables
 	config.LoadConfig()
 
-	// Database connection (configure this to match your .env values)
+	// Database connection (reads from .env via config package)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		"root", "", "localhost", "3306", "backer")
+		config.AppConfig.DBUser,
+		config.AppConfig.DBPassword,
+		config.AppConfig.DBHost,
+		config.AppConfig.DBPort,
+		config.AppConfig.DBName,
+	)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
 
 	// Repository
 	userRepository := user.NewRepository(db)
@@ -50,8 +59,8 @@ func main() {
 	transactionRepository := transaction.NewRepository(db)
 
 	// Service
-	userService := user.NewService(userRepository)
 	authService := auth.NewService()
+	userService := user.NewService(userRepository)
 	campaignService := campaign.NewService(campaignRepository)
 	paymentService := payment.NewService()
 	transactionService := transaction.NewService(transactionRepository, campaignRepository, paymentService)
@@ -109,7 +118,12 @@ func main() {
 	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
 	api.POST("/transactions/notification", transactionHandler.GetNotification)
 
-	router.GET("/users", userWebHandler.Index)
+	// Admin CMS web routes
+	router.GET(usersPath, userWebHandler.Index)
+	router.GET(usersPath+"/new", userWebHandler.New)
+	router.POST(usersPath, userWebHandler.Create)
+	router.GET(usersPath+"/edit/:id", userWebHandler.Edit)
+	router.POST(usersPath+"/update/:id", userWebHandler.Update)
 
 	router.Run(":8080")
 }
@@ -117,7 +131,6 @@ func main() {
 func authMiddleware(authService auth.Service, userService user.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-
 		if !strings.Contains(authHeader, "Bearer") {
 			response := helper.APIResponse("Unauthorized", http.StatusUnauthorized, "error", nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response)
@@ -138,7 +151,6 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 		}
 
 		claim, ok := token.Claims.(jwt.MapClaims)
-
 		if !ok || !token.Valid {
 			response := helper.APIResponse("Unauthorized", http.StatusUnauthorized, "error", nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response)
@@ -147,14 +159,14 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 
 		userID := int(claim["user_id"].(float64))
 
-		user, err := userService.GetUserByID(userID)
+		currentUser, err := userService.GetUserByID(userID)
 		if err != nil {
 			response := helper.APIResponse("Unauthorized", http.StatusUnauthorized, "error", nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, response)
 			return
 		}
 
-		c.Set("currentUser", user)
+		c.Set("currentUser", currentUser)
 	}
 }
 
@@ -171,7 +183,6 @@ func loadTemplates(templatesDir string) multitemplate.Renderer {
 		panic(err.Error())
 	}
 
-	// Generate our templates map from our layouts/ and includes/ directories
 	for _, include := range includes {
 		layoutCopy := make([]string, len(layouts))
 		copy(layoutCopy, layouts)

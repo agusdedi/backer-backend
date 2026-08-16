@@ -62,7 +62,7 @@ func (r *repository) Update(user User) (User, error) {
 func (r *repository) FindAll() ([]User, error) {
 	var users []User
 
-	err := r.db.Find(&users).Error
+	err := r.db.Order("id DESC").Find(&users).Error
 	if err != nil {
 		return users, err
 	}

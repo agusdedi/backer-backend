@@ -27,7 +27,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const usersPath = "/users"
+const (
+	usersPath     = "/users"
+	campaignsPath = "/campaigns"
+)
 
 func main() {
 	// Load .env file
@@ -71,6 +74,7 @@ func main() {
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	userWebHandler := webHandler.NewUserHandler(userService)
+	campaignWebHandler := webHandler.NewCampaignHandler(campaignService, userService)
 
 	// Router
 	router := gin.Default()
@@ -99,26 +103,26 @@ func main() {
 	api := router.Group("/api/v1")
 
 	// User routes
-	api.POST("/users", userHandler.RegisterUser)
+	api.POST(usersPath, userHandler.RegisterUser)
 	api.POST("/sessions", userHandler.Login)
 	api.POST("/email_checkers", userHandler.CheckEmailAvailability)
 	api.POST("/avatars", authMiddleware(authService, userService), userHandler.UploadAvatar)
 	api.GET("/users/fetch", authMiddleware(authService, userService), userHandler.FetchUser)
 
 	// Campaign routes
-	api.GET("/campaigns", campaignHandler.GetCampaigns)
-	api.GET("/campaigns/:id", campaignHandler.GetCampaign)
-	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.CreateCampaign)
-	api.PUT("/campaigns/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
+	api.GET(campaignsPath, campaignHandler.GetCampaigns)
+	api.GET(campaignsPath+"/:id", campaignHandler.GetCampaign)
+	api.POST(campaignsPath, authMiddleware(authService, userService), campaignHandler.CreateCampaign)
+	api.PUT(campaignsPath+"/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadImage)
 
 	// Transaction routes
-	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
+	api.GET(campaignsPath+"/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 	api.GET("/transactions", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
 	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
 	api.POST("/transactions/notification", transactionHandler.GetNotification)
 
-	// Admin CMS web routes
+	// Admin CMS web routes for users
 	router.GET(usersPath, userWebHandler.Index)
 	router.GET(usersPath+"/new", userWebHandler.New)
 	router.POST(usersPath, userWebHandler.Create)
@@ -126,6 +130,16 @@ func main() {
 	router.POST(usersPath+"/update/:id", userWebHandler.Update)
 	router.GET(usersPath+"/avatar/:id", userWebHandler.Avatar)
 	router.POST(usersPath+"/avatar/:id", userWebHandler.UpdateAvatar)
+
+	// Admin CMS web routes for campaigns
+	router.GET(campaignsPath, campaignWebHandler.Index)
+	router.GET(campaignsPath+"/new", campaignWebHandler.New)
+	router.POST(campaignsPath, campaignWebHandler.Create)
+	router.GET(campaignsPath+"/image/:id", campaignWebHandler.NewImage)
+	router.POST(campaignsPath+"/image/:id", campaignWebHandler.CreateImage)
+	router.GET(campaignsPath+"/edit/:id", campaignWebHandler.Edit)
+	router.POST(campaignsPath+"/update/:id", campaignWebHandler.Update)
+	router.GET(campaignsPath+"/show/:id", campaignWebHandler.Show)
 
 	router.Run(":8080")
 }

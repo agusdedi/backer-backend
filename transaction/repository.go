@@ -13,6 +13,7 @@ type Repository interface {
 	Save(transaction Transaction) (Transaction, error)
 	Update(transaction Transaction) (Transaction, error)
 	GetByCode(code string) (Transaction, error)
+	FindAll() ([]Transaction, error)
 }
 
 func NewRepository(db *gorm.DB) *repository {
@@ -77,4 +78,15 @@ func (r *repository) GetByCode(code string) (Transaction, error) {
 	}
 
 	return transaction, nil
+}
+
+func (r *repository) FindAll() ([]Transaction, error) {
+	var transactions []Transaction
+
+	err := r.db.Preload("User").Preload("Campaign").Order("id DESC").Find(&transactions).Error
+	if err != nil {
+		return transactions, err
+	}
+
+	return transactions, nil
 }

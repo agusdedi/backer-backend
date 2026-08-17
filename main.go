@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	usersPath     = "/users"
-	campaignsPath = "/campaigns"
+	usersPath        = "/users"
+	campaignsPath    = "/campaigns"
+	transactionsPath = "/transactions"
 )
 
 func main() {
@@ -73,8 +74,10 @@ func main() {
 	campaignHandler := handler.NewCampaignHandler(campaignService)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
+	// Web Handler
 	userWebHandler := webHandler.NewUserHandler(userService)
 	campaignWebHandler := webHandler.NewCampaignHandler(campaignService, userService)
+	transactionWebHandler := webHandler.NewTransactionHandler(transactionService)
 
 	// Router
 	router := gin.Default()
@@ -118,9 +121,9 @@ func main() {
 
 	// Transaction routes
 	api.GET(campaignsPath+"/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
-	api.GET("/transactions", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
-	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
-	api.POST("/transactions/notification", transactionHandler.GetNotification)
+	api.GET(transactionsPath, authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
+	api.POST(transactionsPath, authMiddleware(authService, userService), transactionHandler.CreateTransaction)
+	api.POST(transactionsPath+"/notification", transactionHandler.GetNotification)
 
 	// Admin CMS web routes for users
 	router.GET(usersPath, userWebHandler.Index)
@@ -141,6 +144,10 @@ func main() {
 	router.POST(campaignsPath+"/update/:id", campaignWebHandler.Update)
 	router.GET(campaignsPath+"/show/:id", campaignWebHandler.Show)
 
+	// Admin CMS web routes for transactions
+	router.GET("/transactions", transactionWebHandler.Index)
+
+	// Start the server
 	router.Run(":8080")
 }
 

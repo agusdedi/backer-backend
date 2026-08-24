@@ -8,6 +8,7 @@ import (
 type Config struct {
 	ServerPort       string
 	ServerHost       string
+	DBDriver         string
 	DBHost           string
 	DBPort           string
 	DBUser           string
@@ -24,6 +25,7 @@ func LoadConfig() {
 	AppConfig = Config{
 		ServerPort:       getEnv("SERVER_PORT", "8080"),
 		ServerHost:       getEnv("SERVER_HOST", "localhost"),
+		DBDriver:         getEnv("DB_DRIVER", "mysql"),
 		DBHost:           getEnv("DB_HOST", "localhost"),
 		DBPort:           getEnv("DB_PORT", "3306"),
 		DBUser:           getEnv("DB_USER", "root"),

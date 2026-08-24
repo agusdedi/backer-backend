@@ -90,6 +90,8 @@ func main() {
 		allowedOrigins = append(allowedOrigins, extraOrigin)
 	}
 
+	log.Println("Allowed CORS origins:", allowedOrigins)
+
 	// CORS middleware
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
@@ -163,7 +165,11 @@ func main() {
 	router.GET("/logout", sessionWebHandler.Destroy)
 
 	// Start the server
-	router.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	router.Run(":" + port)
 }
 
 func authMiddleware(authService auth.Service, userService user.Service) gin.HandlerFunc {

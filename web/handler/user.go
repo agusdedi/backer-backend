@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"backer/storage"
 	"backer/user"
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -190,20 +190,20 @@ func (h *userHandler) UpdateAvatar(c *gin.Context) {
 		return
 	}
 
-	if err := os.MkdirAll(avatarUploadDir, 0755); err != nil {
-		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
-			"ID":     id,
-			"Errors": []string{"Failed to prepare upload directory. Please try again."},
-		})
-		return
-	}
-
-	// Build a safe destination filename by prefixing the user ID and
-	// sanitizing the original filename, instead of trusting it as-is.
 	filename := fmt.Sprintf("%d-%s", id, sanitizeAvatarFilename(file.Filename))
 	path := filepath.Join(avatarUploadDir, filename)
 
-	if err := c.SaveUploadedFile(file, path); err != nil {
+	src, err := file.Open()
+	if err != nil {
+		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
+			"ID":     id,
+			"Errors": []string{"Failed to save avatar file. Please try again."},
+		})
+		return
+	}
+	defer src.Close()
+
+	if err := storage.UploadFile(c.Request.Context(), src, path, file.Header.Get("Content-Type")); err != nil {
 		c.HTML(http.StatusOK, userAvatarTemplate, gin.H{
 			"ID":     id,
 			"Errors": []string{"Failed to save avatar file. Please try again."},

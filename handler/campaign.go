@@ -3,10 +3,10 @@ package handler
 import (
 	"backer/campaign"
 	"backer/helper"
+	"backer/storage"
 	"backer/user"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -220,7 +220,16 @@ func (h *campaignHandler) UploadImage(c *gin.Context) {
 	fileName := fmt.Sprintf("%d-%d-%s", userID, timestamp, filename)
 	path := fmt.Sprintf("images/campaign-images/%s", fileName)
 
-	err = c.SaveUploadedFile(file, path)
+	src, err := file.Open()
+	if err != nil {
+		data := gin.H{"is_uploaded": false}
+		response := helper.APIResponse(helper.MsgFailedToSaveFileToServer, http.StatusInternalServerError, "error", data)
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+	defer src.Close()
+
+	err = storage.UploadFile(c.Request.Context(), src, path, file.Header.Get("Content-Type"))
 	if err != nil {
 		data := gin.H{"is_uploaded": false}
 		response := helper.APIResponse(helper.MsgFailedToSaveFileToServer, http.StatusInternalServerError, "error", data)
@@ -230,8 +239,6 @@ func (h *campaignHandler) UploadImage(c *gin.Context) {
 
 	_, err = h.service.SaveCampaignImage(input, path)
 	if err != nil {
-		os.Remove(path)
-
 		errorMessage := gin.H{"errors": err.Error(), "is_uploaded": false}
 		response := helper.APIResponse(helper.MsgFailedToSaveImageToDatabase, http.StatusInternalServerError, "error", errorMessage)
 		c.JSON(http.StatusInternalServerError, response)

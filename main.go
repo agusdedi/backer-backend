@@ -7,6 +7,7 @@ import (
 	"backer/handler"
 	"backer/helper"
 	"backer/payment"
+	"backer/storage"
 	"backer/transaction"
 	"backer/user"
 	webHandler "backer/web/handler"
@@ -45,7 +46,16 @@ func main() {
 	// Load config from .env or environment variables
 	config.LoadConfig()
 
+	// Init R2 storage (Cloudflare S3-compatible object storage)
+	if err := storage.Init(); err != nil {
+		log.Fatal("Failed to init R2 storage:", err)
+	}
+
 	// Database connection (reads from .env via config package)
+	if err := config.RegisterTLSConfig(); err != nil {
+		log.Fatal("Failed to register TLS config:", err)
+	}
+
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		config.AppConfig.DBUser,
 		config.AppConfig.DBPassword,
@@ -53,6 +63,10 @@ func main() {
 		config.AppConfig.DBPort,
 		config.AppConfig.DBName,
 	)
+
+	if os.Getenv("DB_CA_CERT_PATH") != "" {
+		dsn += "&tls=aiven"
+	}
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {

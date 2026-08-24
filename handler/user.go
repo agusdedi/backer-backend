@@ -3,6 +3,7 @@ package handler
 import (
 	"backer/auth"
 	"backer/helper"
+	"backer/storage"
 	"backer/user"
 	"errors"
 	"fmt"
@@ -144,7 +145,16 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 
 	path := fmt.Sprintf("images/avatars/%d-%s", userID, file.Filename)
 
-	err = c.SaveUploadedFile(file, path)
+	src, err := file.Open()
+	if err != nil {
+		data := gin.H{"is_uploaded": false}
+		response := helper.APIResponse(helper.MsgFailedToSaveAvatarFile, http.StatusInternalServerError, "error", data)
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+	defer src.Close()
+
+	err = storage.UploadFile(c.Request.Context(), src, path, file.Header.Get("Content-Type"))
 	if err != nil {
 		data := gin.H{"is_uploaded": false}
 		response := helper.APIResponse(helper.MsgFailedToSaveAvatarFile, http.StatusInternalServerError, "error", data)

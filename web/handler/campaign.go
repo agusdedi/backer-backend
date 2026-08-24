@@ -2,6 +2,7 @@ package handler
 
 import (
 	"backer/campaign"
+	"backer/storage"
 	"backer/user"
 	"fmt"
 	"net/http"
@@ -129,7 +130,14 @@ func (h *campaignHandler) CreateImage(c *gin.Context) {
 	fileName := fmt.Sprintf("%d-%d-%s", userID, timestamp, filename)
 	path := fmt.Sprintf("images/campaign-images/%s", fileName)
 
-	err = c.SaveUploadedFile(file, path)
+	src, err := file.Open()
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, errorTemplate, nil)
+		return
+	}
+	defer src.Close()
+
+	err = storage.UploadFile(c.Request.Context(), src, path, file.Header.Get("Content-Type"))
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, errorTemplate, nil)
 		return

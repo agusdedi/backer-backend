@@ -151,6 +151,27 @@ Or import the collection directly into Postman:
 
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://documenter.getpostman.com/view/30805799/2sBY4HTiWm)
 
+## Deployment
+
+[#deployment](#deployment)
+
+This backend is deployed as a Docker container. The full step-by-step guide covers:
+
+- Setting up a free managed MySQL database on [Aiven](https://aiven.io)
+- Configuring TLS for the database connection
+- Setting up [Cloudflare R2](https://developers.cloudflare.com/r2/) for persistent file storage (campaign images & avatars)
+- Deploying the backend container to [Render](https://render.com)
+- Deploying the frontend to [Vercel](https://vercel.com)
+- Connecting CORS between the two
+
+See [`deployment-guide-backer.md`](./deployment-guide-backer.md) in this repository for the complete walkthrough.
+
+## Related Repository
+
+[#related-repository](#related-repository)
+
+- Frontend: [github.com/agusdedi/backer-frontend](https://github.com/agusdedi/backer-frontend)
+
 ## Contributing
 
 Contributions and suggestions are welcome. For major changes, please open an issue first to discuss what you'd like to change.

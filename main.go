@@ -73,6 +73,12 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	// Auto-create tables on a fresh database (no separate migration files exist in this repo)
+	if err := db.AutoMigrate(&user.User{}, &campaign.Campaign{}, &campaign.CampaignImage{}, &transaction.Transaction{}); err != nil {
+		log.Fatal("Failed to run auto-migration:", err)
+	}
+	log.Println("Database migration completed")
+
 	// Repository
 	userRepository := user.NewRepository(db)
 	campaignRepository := campaign.NewRepository(db)

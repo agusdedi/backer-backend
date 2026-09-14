@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"os"
-	"strconv"
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
@@ -23,6 +22,7 @@ type Service interface {
 
 type Transaction struct {
 	ID     int
+	Code   string
 	Amount int
 }
 
@@ -53,7 +53,7 @@ func (s *service) GetPaymentURL(transaction Transaction, user user.User) (string
 
 	snapReq := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
-			OrderID:  strconv.Itoa(transaction.ID),
+			OrderID:  transaction.Code,
 			GrossAmt: int64(transaction.Amount),
 		},
 		CustomerDetail: &midtrans.CustomerDetails{

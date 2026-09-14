@@ -5,7 +5,6 @@ import (
 	"backer/payment"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -93,6 +92,7 @@ func (s *service) CreateTransaction(input CreateTransactionInput) (Transaction, 
 
 	paymentTransaction := payment.Transaction{
 		ID:     newTransaction.ID,
+		Code:   newTransaction.Code,
 		Amount: newTransaction.Amount,
 	}
 
@@ -111,12 +111,7 @@ func (s *service) CreateTransaction(input CreateTransactionInput) (Transaction, 
 }
 
 func (s *service) ProcessPayment(input TransactionNotificationInput) error {
-	transactionID, err := strconv.Atoi(input.OrderID)
-	if err != nil {
-		return fmt.Errorf("%w: order_id=%q", ErrInvalidOrderID, input.OrderID)
-	}
-
-	transaction, err := s.repository.GetByID(transactionID)
+	transaction, err := s.repository.GetByCode(input.OrderID)
 	if err != nil {
 		return err
 	}
